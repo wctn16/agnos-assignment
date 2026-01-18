@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --background: #e1e9f3;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #3b7ba5;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.role-icon {
+  width: 120px;
+  height: 120px;
+  color: var(--primary);
+}
+
+.form-input {
+  width: 100%;
+  margin-top: 0.25rem; /* mt-1 */
+  padding: 0.625rem 1rem; /* py-2.5 px-4 */
+  font-size: 0.875rem; /* text-sm */
+
+  border-radius: 0.75rem; /* rounded-xl */
+  border: 1px solid #cbd5e1; /* border-slate-300 */
+
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: #3b82f6; /* blue-500 */
+  box-shadow: 0 0 0 2px rgba(191, 219, 254, 0.9); /* ring-blue-100 */
+}
+
+.form-input:invalid {
+  border-color: #ef4444;
+}
+
+.form-input:invalid:focus {
+  box-shadow: 0 0 0 2px rgba(254, 202, 202, 0.8);
+}
+
+.form-input:disabled {
+  background-color: #f8fafc; /* slate-50 */
+  color: #64748b; /* slate-500 */
+  cursor: not-allowed;
+}
+
+
