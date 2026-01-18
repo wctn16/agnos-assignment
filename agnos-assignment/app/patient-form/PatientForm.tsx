@@ -65,7 +65,7 @@ export default function PatientForm({
     ablyRef.current = ablyClient;
 
     return () => {
-      ablyClient.close();
+      // ablyClient.close();
     };
   }, []);
 

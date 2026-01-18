@@ -57,10 +57,8 @@ export default function StaffPage() {
       setPatientStatus("idle");
     };
 
-    return () => {
-      channel?.unsubscribe();
-      ably?.close();
-    };
+   return () => {
+  };
   }, []);
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
