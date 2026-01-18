@@ -1,8 +1,13 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import Ably from "ably";
+type AblyRealtimeClient = Ably.Realtime;
+
 type PatientFormProps = {
   readOnly?: boolean;
+  enableRealtime?: boolean;
+  data?: PatientFormData;
 };
 export type PatientFormData = {
   FirstName: string;
@@ -21,7 +26,10 @@ export type PatientFormData = {
   ContactNumber: string;
 };
 
-export default function PatientForm({ readOnly = false }: PatientFormProps) {
+export default function PatientForm({
+  readOnly = false,
+  data,
+}: PatientFormProps) {
   const initialFormData: PatientFormData = {
     FirstName: "",
     MiddleName: null,
@@ -42,19 +50,60 @@ export default function PatientForm({ readOnly = false }: PatientFormProps) {
   const [formData, setFormData] = useState<PatientFormData>(initialFormData);
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
+  const ablyRef = useRef<Ably.Realtime | null>(null);
 
+  const [ably, setAbly] = useState<AblyRealtimeClient | null>(null);
+  useEffect(() => {
+    if (readOnly) return;
+    console.log("INIT ABLY");
+
+    const ablyClient = new Ably.Realtime({
+      authUrl: "/api/ably-token?role=patient",
+    });
+
+    ablyClient.connection.on("connected", () => {
+      console.log("ABLY CONNECTED");
+    });
+
+    ablyRef.current = ablyClient;
+
+    return () => {
+      ablyClient.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!data) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFormData(data);
+    console.log(data);
+    
+  }, [data]);
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: value === "" ? null : value,
+      [name]: value,
     }));
+
+    if (!ablyRef.current) {
+      console.log("ABLY STILL NULL");
+      return;
+    }
+
+    console.log("PUBLISH:", name, value);
+
+    const channel = ablyRef.current.channels.get("patient-form");
+    channel.publish("field-change", {
+      field: name,
+      value,
+    });
   };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -64,7 +113,7 @@ export default function PatientForm({ readOnly = false }: PatientFormProps) {
   };
   return (
     <form onSubmit={handleSubmit} className="space-y-8 cols-3">
-      <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-3">
+      <div className="lg:grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-3 sm:row">
         <div>
           <label className="block text-sm font-medium text-gray-600">
             First Name <span className="text-red-500">*</span>
@@ -77,7 +126,7 @@ export default function PatientForm({ readOnly = false }: PatientFormProps) {
             className="form-input"
             readOnly={readOnly}
             value={formData.FirstName ?? ""}
-            onChange={handleChange}
+            onChange={readOnly ? undefined : handleChange}
           />
         </div>
 
@@ -148,7 +197,6 @@ export default function PatientForm({ readOnly = false }: PatientFormProps) {
               <option value="female">Female</option>
               <option value="other">Other</option>
             </select>
-            
           )}
         </div>
 
@@ -252,18 +300,16 @@ export default function PatientForm({ readOnly = false }: PatientFormProps) {
           )}
         </div>
 
-        <div className="col-span-3">
+        <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-600">
             Address
           </label>
-          <input
-            type="text"
+          <textarea
             name="Address"
             placeholder={readOnly ? "" : "Enter address"}
             className="form-input"
             readOnly={readOnly}
-            value={formData.Address ?? ""}
-            onChange={handleChange}
+            // value={formData.Address ?? ""}
           />
         </div>
         <div className="col-span-3">

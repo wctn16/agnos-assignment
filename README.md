@@ -1,6 +1,6 @@
 # Agnos-Assignment
 
-# 1. Clone the repository
+1. Clone the repository
 git clone https://github.com/wctn16/agnos-assignment.git
 cd agnos-assignment
 
@@ -15,3 +15,7 @@ npm run dev
 
 5. Insatll Icon
 npm install lucide-react
+
+# Ably
+npm install ably
+
