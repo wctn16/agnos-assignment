@@ -2,11 +2,10 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import Ably from "ably";
-type AblyRealtimeClient = Ably.Realtime;
 
 type PatientFormProps = {
   readOnly?: boolean;
-  enableRealtime?: boolean;
+  status?: string;
   data?: PatientFormData;
 };
 export type PatientFormData = {
@@ -29,6 +28,7 @@ export type PatientFormData = {
 export default function PatientForm({
   readOnly = false,
   data,
+  status,
 }: PatientFormProps) {
   const initialFormData: PatientFormData = {
     FirstName: "",
@@ -51,18 +51,15 @@ export default function PatientForm({
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
   const ablyRef = useRef<Ably.Realtime | null>(null);
+  const [patientStatus, setPatientStatus] = useState<
+    "typing" | "idle" | "submitted" | "inactive"
+  >("idle");
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [ably, setAbly] = useState<AblyRealtimeClient | null>(null);
   useEffect(() => {
     if (readOnly) return;
-    console.log("INIT ABLY");
-
     const ablyClient = new Ably.Realtime({
       authUrl: "/api/ably-token?role=patient",
-    });
-
-    ablyClient.connection.on("connected", () => {
-      console.log("ABLY CONNECTED");
     });
 
     ablyRef.current = ablyClient;
@@ -73,15 +70,17 @@ export default function PatientForm({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPatientStatus(status as "typing" | "idle" | "submitted" | "inactive");
     if (!data) return;
-
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormData(data);
-    console.log(data);
-    
-  }, [data]);
+  }, [data, status]);
+
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => {
     const { name, value } = e.target;
 
@@ -91,26 +90,48 @@ export default function PatientForm({
     }));
 
     if (!ablyRef.current) {
-      console.log("ABLY STILL NULL");
       return;
     }
-
-    console.log("PUBLISH:", name, value);
 
     const channel = ablyRef.current.channels.get("patient-form");
     channel.publish("field-change", {
       field: name,
       value,
     });
+    // channel.publish("typing", { status: "typing" });
+    channel.publish("typing", { status: "typing" });
+    // setPatientStatus("typing");
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      channel.publish("typing", { status: "idle" });
+      setPatientStatus("idle");
+    }, 2000);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    console.log("Patient Data:", formData);
-
-    setFormData(initialFormData); // clear form
+    if (!ablyRef.current) {
+      return;
+    }
+    const channel = ablyRef.current.channels.get("patient-form");
+    channel.publish("typing", { status: "submitted" });
+    // setFormData(initialFormData); // clear form
   };
+  const handleCancel = () => {
+    if (ablyRef.current) {
+      setFormData(initialFormData);
+      const channel = ablyRef.current.channels.get("patient-form");
+      channel.publish("field-change", {
+        action: "clear",
+      });
+      channel.publish("typing", { status: "inactive" });
+    }
+    router.push("/", {});
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8 cols-3">
       <div className="lg:grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-3 sm:row">
@@ -165,6 +186,7 @@ export default function PatientForm({
           <label className="block text-sm font-medium text-gray-600">
             Date of Birth <span className="text-red-500">*</span>
           </label>
+
           <input
             required
             type="date"
@@ -182,20 +204,24 @@ export default function PatientForm({
             Gender <span className="text-red-500">*</span>
           </label>
           {readOnly ? (
-            <div className="form-input bg-slate-50 text-slate-500">
-              {formData.Gender || "Not provided"}
-            </div>
+            <input
+              type="text"
+              name="Gender"
+              className="form-input"
+              readOnly={readOnly}
+              value={formData.Gender ?? ""}
+            />
           ) : (
             <select
               required
               className="form-input"
               name="Gender"
-              disabled={readOnly}
+              onChange={handleChange}
             >
               <option value="">Select gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
             </select>
           )}
         </div>
@@ -235,47 +261,29 @@ export default function PatientForm({
 
         <div>
           <label className="block text-sm font-medium text-gray-600">
-            Preferred Language
-          </label>
-          {readOnly ? (
-            <div className="form-input bg-slate-50 text-slate-500">
-              {formData.PreferredLanguage || "Not provided"}
-            </div>
-          ) : (
-            <select
-              className="form-input"
-              name="PreferredLanguage"
-              disabled={readOnly}
-            >
-              <option value="">Select language</option>
-              <option value="th">Thai</option>
-              <option value="en">English</option>
-              <option value="other">Other</option>
-            </select>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-600">
             Nationality <span className="text-red-500">*</span>
           </label>
           {readOnly ? (
-            <div className="form-input bg-slate-50 text-slate-500">
-              {formData.Nationality || "Not provided"}
-            </div>
+            <input
+              type="text"
+              name="Nationality"
+              className="form-input"
+              readOnly={readOnly}
+              value={formData.Nationality ?? ""}
+            />
           ) : (
             <select
               required
               name="Nationality"
               className="form-input"
-              disabled={readOnly}
+              onChange={handleChange}
             >
               <option value="">Select nationality</option>
-              <option value="thai">Thai</option>
-              <option value="american">American</option>
-              <option value="chinese">Chinese</option>
-              <option value="japanese">Japanese</option>
-              <option value="other">Other</option>
+              <option value="Thai">Thai</option>
+              <option value="amerAmericanican">American</option>
+              <option value="Chinese">Chinese</option>
+              <option value="Japanese">Japanese</option>
+              <option value="Other">Other</option>
             </select>
           )}
         </div>
@@ -285,17 +293,52 @@ export default function PatientForm({
             Religion (optional)
           </label>
           {readOnly ? (
-            <div className="form-input bg-slate-50 text-slate-500">
-              {formData.Religion || "Not provided"}
-            </div>
+            <input
+              type="text"
+              name="Religion"
+              className="form-input"
+              readOnly={readOnly}
+              value={formData.Religion ?? ""}
+            />
           ) : (
-            <select className="form-input" name="Religion">
+            <select
+              className="form-input"
+              name="Religion"
+              onChange={handleChange}
+            >
               <option value="">Select religion</option>
               <option>Buddhism</option>
               <option>Christianity</option>
               <option>Islam</option>
               <option>Hinduism</option>
               <option>Other</option>
+            </select>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-600">
+            Preferred Language
+          </label>
+          {readOnly ? (
+            <input
+              type="text"
+              name="PreferredLanguage"
+              className="form-input"
+              readOnly={readOnly}
+              value={formData.PreferredLanguage ?? ""}
+            />
+          ) : (
+            <select
+              className="form-input"
+              name="PreferredLanguage"
+              disabled={readOnly}
+              onChange={handleChange}
+            >
+              <option value="">Select language</option>
+              <option value="Thai">Thai</option>
+              <option value="English">English</option>
+              <option value="Other">Other</option>
             </select>
           )}
         </div>
@@ -309,7 +352,8 @@ export default function PatientForm({
             placeholder={readOnly ? "" : "Enter address"}
             className="form-input"
             readOnly={readOnly}
-            // value={formData.Address ?? ""}
+            onChange={handleChange}
+            value={formData.Address ?? ""}
           />
         </div>
         <div className="col-span-3">
@@ -365,27 +409,54 @@ export default function PatientForm({
 
       <div className="my-2 border-t border-slate-200" />
 
-      <div className="flex justify-end gap-3 pt-2">
-        {/* Submit */}
-        <button
-          hidden={readOnly}
-          type="submit"
-          className="rounded-lg bg-blue-500
-               px-4 py-2 text-sm font-medium
-               text-white hover:bg-blue-600 transition"
-        >
-          Submit
-        </button>
-        {/* Close */}
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="rounded-lg border border-slate-300
-               px-4 py-2 text-sm font-medium
-               text-slate-600 hover:bg-slate-100 transition"
-        >
-          Close
-        </button>
+      <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Status */}
+        {readOnly ? (
+          <div className="flex items-center gap-2 text-sm">
+            {patientStatus === "typing" && (
+              <span className="text-blue-500">🟢 Patient is typing…</span>
+            )}
+
+            {patientStatus === "idle" && (
+              <span className="text-gray-400">⏸ Patient is idle</span>
+            )}
+
+            {patientStatus === "submitted" && (
+              <span className="font-semibold text-green-600">
+                ✅ Form submitted
+              </span>
+            )}
+            {patientStatus === "inactive" && (
+              <span className="font-semibold text-red-500">
+                🔴 Patient inactive
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-sm"></div>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-end gap-2">
+          {!readOnly && (
+            <button
+              type="submit"
+              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium
+                   text-white hover:bg-blue-600 transition"
+            >
+              Submit
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm
+                 font-medium text-slate-600 hover:bg-slate-100 transition"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </form>
   );

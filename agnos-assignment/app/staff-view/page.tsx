@@ -2,10 +2,10 @@
 import PatientForm, { PatientFormData } from "../patient-form/PatientForm";
 import "../globals.css";
 import { useState, useEffect, useRef } from "react";
-import Ably from "ably"
+import Ably from "ably";
 
 export default function StaffPage() {
-     const ablyRef = useRef<Ably.Realtime | null>(null);
+  const ablyRef = useRef<Ably.Realtime | null>(null);
 
   const [patientData, setPatientData] = useState<PatientFormData>({
     FirstName: "",
@@ -23,6 +23,9 @@ export default function StaffPage() {
     Relationship: "",
     ContactNumber: "",
   });
+  const [patientStatus, setPatientStatus] = useState<
+    "typing" | "idle" | "submitted" | "inactive"
+  >("idle");
 
   useEffect(() => {
     const ably = new Ably.Realtime({
@@ -34,19 +37,29 @@ export default function StaffPage() {
     const channel = ably.channels.get("patient-form");
 
     channel.subscribe("field-change", (msg) => {
-      const { field, value } = msg.data;
-
-      console.log("STAFF RECEIVED:", field, value);
+      const { field, value, status } = msg.data;
+      if (msg.data.action === "clear") {
+        handleFormClear();
+        return
+      }
 
       setPatientData((prev) => ({
         ...prev,
         [field]: value,
       }));
     });
+    channel.subscribe("typing", (msg) => {
+      setPatientStatus(msg.data.status);
+    });
+
+    const handleFormClear = () => {
+      setPatientData(patientData);
+      setPatientStatus("idle");
+    };
 
     return () => {
-      channel.unsubscribe();
-      ably.close();
+      channel?.unsubscribe();
+      ably?.close();
     };
   }, []);
   return (
@@ -56,7 +69,7 @@ export default function StaffPage() {
           Staff View
         </h1>
 
-        <PatientForm readOnly  data={patientData} />
+        <PatientForm readOnly data={patientData} status={patientStatus} />
       </div>
     </div>
   );
