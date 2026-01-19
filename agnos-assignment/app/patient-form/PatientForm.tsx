@@ -435,6 +435,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
             Address
           </label>
           <textarea
+            rows={4}
             name="Address"
             placeholder={isStaff ? "" : "Enter address"}
             className={getInputClass(false, isStaff)}
