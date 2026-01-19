@@ -1,54 +1,36 @@
-# Agnos-Assignment
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-### 1. Clone the repository
-git clone https://github.com/wctn16/agnos-assignment.git
-cd agnos-assignment
+First, run the development server:
 
-### 2. Install Next.js
-npx create-next-app@latest agnos-assignment
-
-### 3. Install dependencies
-npm install
-
-### 4. Run the development server
+```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-### 5. Insatll Icon
-npm install lucide-react
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-# Ably
-npm install ably
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-# Deploy on Vercal
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Learn More
 
-This project is deployed using [Vercel](https://vercel.com), a platform optimized for frontend frameworks like Next.js.
+To learn more about Next.js, take a look at the following resources:
 
-### Steps to Deploy
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-1. **Connect to GitHub**
-   - Push your project to a GitHub repository.
-   - Go to [vercel.com/import](https://vercel.com/import) and select **"Import Git Repository"**.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-2. **Configure Project**
-   - Select GitHub repo.
-   - Choose the correct framework preset (e.g., **Next.js**).
-   - Set environment variables if needed.
+## Deploy on Vercel
 
-3. **Deploy**
-   - Click **"Deploy"** and wait for the build to complete.
-   - This site will be live at `https://agnos-assignment-project.vercel.app/`
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-###  Auto Deploy on Push
-Every time you push to the connected GitHub branch (e.g., `main`), Vercel will automatically rebuild and redeploy your site.
-
-### Free Tier
-Vercel's Hobby plan includes:
-- Unlimited deployments
-- Free SSL
-- Custom domains
-- Serverless functions (limited)
-
----
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
