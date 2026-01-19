@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Ably from "ably";
 
 type PatientFormProps = {
-  readOnly?: boolean;
+  isStaff?: boolean;
   status?: string;
   data?: PatientFormData;
 };
@@ -25,11 +25,7 @@ export type PatientFormData = {
   ContactNumber: string;
 };
 
-export default function PatientForm({
-  readOnly = false,
-  data,
-  status,
-}: PatientFormProps) {
+export default function PatientForm({ isStaff = false, data, status }: Readonly<PatientFormProps>) {
   const initialFormData: PatientFormData = {
     FirstName: "",
     MiddleName: null,
@@ -57,7 +53,19 @@ export default function PatientForm({
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (readOnly) return;
+    if (isStaff) {
+      // If switching to staff mode, ensure any existing client is closed.
+      if (ablyRef.current) {
+        try {
+          ablyRef.current.close();
+        } catch {
+          // ignore close errors
+        }
+        ablyRef.current = null;
+      }
+      return;
+    }
+
     const ablyClient = new Ably.Realtime({
       authUrl: "/api/ably-token?role=patient",
     });
@@ -65,15 +73,19 @@ export default function PatientForm({
     ablyRef.current = ablyClient;
 
     return () => {
-      // ablyClient.close();
+      try {
+        ablyClient.close();
+      } catch {
+        // ignore close errors
+      }
+      ablyRef.current = null;
     };
-  }, []);
+  }, [isStaff]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPatientStatus(status as "typing" | "idle" | "submitted" | "inactive");
     if (!data) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormData(data);
   }, [data, status]);
 
@@ -98,28 +110,69 @@ export default function PatientForm({
       field: name,
       value,
     });
-    // channel.publish("typing", { status: "typing" });
     channel.publish("typing", { status: "typing" });
-    // setPatientStatus("typing");
     if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+    clearTimeout(typingTimeoutRef.current);
+  }
 
-    typingTimeoutRef.current = setTimeout(() => {
-      channel.publish("typing", { status: "idle" });
-      setPatientStatus("idle");
-    }, 2000);
+  typingTimeoutRef.current = setTimeout(() => {
+    channel.publish("typing", { status: "idle" });
+    setPatientStatus("idle");
+  }, 1000);
+  };
+
+  const requiredFields: (keyof PatientFormData)[] = [
+    "FirstName",
+    "LastName",
+    "BirthDate",
+    "Gender",
+    "PhoneNumber",
+    "Email",
+    "Nationality",
+  ];
+  type FormErrors = Partial<Record<keyof PatientFormData, string>>;
+
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const handleBlur = (
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
+    const { name, value } = e.target;
+    if (!value.trim() && !isStaff) {
+      setErrors((prev) => ({ ...prev, [name]: `This field is required` }));
+    } else {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const newErrors: FormErrors = {};
+
+    requiredFields.forEach((field) => {
+      const value = formData[field];
+
+      if (value === null || value === "") {
+        newErrors[field] = "This field is required";
+      }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     if (!ablyRef.current) {
       return;
     }
     const channel = ablyRef.current.channels.get("patient-form");
     channel.publish("typing", { status: "submitted" });
-    // setFormData(initialFormData); // clear form
   };
+
   const handleCancel = () => {
     if (ablyRef.current) {
       setFormData(initialFormData);
@@ -131,92 +184,114 @@ export default function PatientForm({
     }
     router.push("/", {});
   };
+  const inputBase =
+    "w-full mt-1 px-4 py-2.5 text-sm rounded-xl border outline-none transition h-10";
+  const getInputClass = (hasError?: boolean, disabled?: boolean) => {
+    if (disabled) {
+      return `${inputBase} bg-slate-50 text-slate-500 cursor-not-allowed`;
+    }
+
+    if (hasError) {
+      return `${inputBase} border-red-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-300`;
+    }
+
+    return `${inputBase} border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200`;
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 cols-3">
       <div className="lg:grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-3 sm:row">
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="FirstName" className="block text-sm font-medium text-gray-600">
             First Name <span className="text-red-500">*</span>
           </label>
           <input
-            required
             type="text"
             name="FirstName"
-            placeholder={readOnly ? "" : "Enter First Name"}
-            className="form-input"
-            readOnly={readOnly}
+            placeholder={isStaff ? "" : "Enter First Name"}
+            readOnly={isStaff}
             value={formData.FirstName ?? ""}
-            onChange={readOnly ? undefined : handleChange}
+            onChange={isStaff ? undefined : handleChange}
+            onBlur={handleBlur}
+            className={getInputClass(!!errors.FirstName, isStaff)}
           />
+          {errors.FirstName && (
+            <small className="text-red-500">{errors.FirstName}</small>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="MiddleName" className="block text-sm font-medium text-gray-600">
             Middle Name (optional)
           </label>
           <input
             type="text"
             name="MiddleName"
-            placeholder={readOnly ? "" : "Enter Middle Name"}
-            className="form-input"
-            readOnly={readOnly}
+            placeholder={isStaff ? "" : "Enter Middle Name"}
+            className={getInputClass(false, isStaff)}
+            readOnly={isStaff}
             value={formData.MiddleName ?? ""}
             onChange={handleChange}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="LastName" className="block text-sm font-medium text-gray-600">
             Last Name <span className="text-red-500">*</span>
           </label>
           <input
-            required
             type="text"
             name="LastName"
-            placeholder={readOnly ? "" : "Enter Last Name"}
-            className="form-input"
-            readOnly={readOnly}
+            placeholder={isStaff ? "" : "Enter Last Name"}
+            readOnly={isStaff}
             value={formData.LastName ?? ""}
             onChange={handleChange}
+            onBlur={handleBlur}
+            className={getInputClass(!!errors.LastName, isStaff)}
           />
+          {errors.LastName && (
+            <small className="text-red-500">{errors.LastName}</small>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="BirthDate" className="block text-sm font-medium text-gray-600">
             Date of Birth <span className="text-red-500">*</span>
           </label>
 
           <input
-            required
             type="date"
             name="BirthDate"
-            className="form-input"
-            readOnly={readOnly}
+            readOnly={isStaff}
             value={formData.BirthDate ?? ""}
             onChange={handleChange}
             max={today}
+            onBlur={handleBlur}
+            className={getInputClass(!!errors.BirthDate, isStaff)}
           />
+          {errors.BirthDate && (
+            <small className="text-red-500">{errors.BirthDate}</small>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Gender" className="block text-sm font-medium text-gray-600">
             Gender <span className="text-red-500">*</span>
           </label>
-          {readOnly ? (
+          {isStaff ? (
             <input
               type="text"
               name="Gender"
-              className="form-input"
-              readOnly={readOnly}
+              readOnly={isStaff}
               value={formData.Gender ?? ""}
+              className={getInputClass(false, isStaff)}
             />
           ) : (
             <select
-              required
-              className="form-input"
+              className={getInputClass(!!errors.Gender, isStaff)}
               name="Gender"
               onChange={handleChange}
+              onBlur={handleBlur}
             >
               <option value="">Select gender</option>
               <option value="Male">Male</option>
@@ -224,59 +299,68 @@ export default function PatientForm({
               <option value="Other">Other</option>
             </select>
           )}
+          {errors.Gender && (
+            <small className="text-red-500">{errors.Gender}</small>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="PhoneNumber" className="block text-sm font-medium text-gray-600">
             Phone Number <span className="text-red-500">*</span>
           </label>
           <input
-            required
             type="tel"
             name="PhoneNumber"
-            placeholder={readOnly ? "" : "Enter phone number"}
-            className="form-input"
+            placeholder={isStaff ? "" : "Enter phone number"}
+            className={getInputClass(!!errors.PhoneNumber, isStaff)}
             pattern="^(0\d{8,9}|\+66\d{8,9})$"
-            readOnly={readOnly}
+            readOnly={isStaff}
             value={formData.PhoneNumber ?? ""}
             onChange={handleChange}
+            onBlur={handleBlur}
           />
+          {errors.PhoneNumber && (
+            <small className="text-red-500">{errors.PhoneNumber}</small>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Email" className="block text-sm font-medium text-gray-600">
             Email <span className="text-red-500">*</span>
           </label>
           <input
-            required
             type="email"
             name="Email"
-            placeholder={readOnly ? "" : "Enter Email"}
-            className="form-input"
-            readOnly={readOnly}
+            placeholder={isStaff ? "" : "Enter Email"}
+            className={getInputClass(!!errors.Email, isStaff)}
+            readOnly={isStaff}
             value={formData.Email ?? ""}
             onChange={handleChange}
+            onBlur={handleBlur}
           />
+          {errors.Email && (
+            <small className="text-red-500">{errors.Email}</small>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Nationality" className="block text-sm font-medium text-gray-600">
             Nationality <span className="text-red-500">*</span>
           </label>
-          {readOnly ? (
+          {isStaff ? (
             <input
               type="text"
               name="Nationality"
-              className="form-input"
-              readOnly={readOnly}
+              className={getInputClass(false, isStaff)}
+              readOnly={isStaff}
               value={formData.Nationality ?? ""}
             />
           ) : (
             <select
-              required
               name="Nationality"
-              className="form-input"
+              className={getInputClass(!!errors.Nationality, isStaff)}
               onChange={handleChange}
+              onBlur={handleBlur}
             >
               <option value="">Select nationality</option>
               <option value="Thai">Thai</option>
@@ -286,23 +370,26 @@ export default function PatientForm({
               <option value="Other">Other</option>
             </select>
           )}
+          {errors.Nationality && (
+            <small className="text-red-500">{errors.Nationality}</small>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Religion" className="block text-sm font-medium text-gray-600">
             Religion (optional)
           </label>
-          {readOnly ? (
+          {isStaff ? (
             <input
               type="text"
               name="Religion"
-              className="form-input"
-              readOnly={readOnly}
+              className={getInputClass(false, isStaff)}
+              readOnly={isStaff}
               value={formData.Religion ?? ""}
             />
           ) : (
             <select
-              className="form-input"
+              className={getInputClass(false, isStaff)}
               name="Religion"
               onChange={handleChange}
             >
@@ -317,22 +404,22 @@ export default function PatientForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="PreferredLanguage" className="block text-sm font-medium text-gray-600">
             Preferred Language
           </label>
-          {readOnly ? (
+          {isStaff ? (
             <input
               type="text"
               name="PreferredLanguage"
-              className="form-input"
-              readOnly={readOnly}
+              className={getInputClass(false, isStaff)}
+              readOnly={isStaff}
               value={formData.PreferredLanguage ?? ""}
             />
           ) : (
             <select
-              className="form-input"
+              className={getInputClass(false, isStaff)}
               name="PreferredLanguage"
-              disabled={readOnly}
+              disabled={isStaff}
               onChange={handleChange}
             >
               <option value="">Select language</option>
@@ -344,63 +431,64 @@ export default function PatientForm({
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Address" className="block text-sm font-medium text-gray-600">
             Address
           </label>
           <textarea
             name="Address"
-            placeholder={readOnly ? "" : "Enter address"}
-            className="form-input"
-            readOnly={readOnly}
+            placeholder={isStaff ? "" : "Enter address"}
+            className={getInputClass(false, isStaff)}
+            readOnly={isStaff}
             onChange={handleChange}
             value={formData.Address ?? ""}
           />
         </div>
         <div className="col-span-3">
-          <label className="block text-md font-medium text-gray-600 font-semibold">
+          <label htmlFor="ContactName" className="block text-md font-medium text-gray-600 font-semibold">
             Emergency Contact
           </label>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="ContactName" className="block text-sm font-medium text-gray-600">
             Contact name
           </label>
           <input
+            id="ContactName"
             type="text"
             name="ContactName"
-            placeholder={readOnly ? "" : "Enter full name"}
-            className="form-input"
-            readOnly={readOnly}
+            placeholder={isStaff ? "" : "Enter full name"}
+            className={getInputClass(false, isStaff)}
+            readOnly={isStaff}
             value={formData.ContactName ?? ""}
             onChange={handleChange}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Relationship" className="block text-sm font-medium text-gray-600">
             Relationship
           </label>
           <input
             type="text"
             name="Relationship"
-            placeholder={readOnly ? "" : "e.g. Parent, Spouse"}
-            className="form-input"
-            readOnly={readOnly}
+            placeholder={isStaff ? "" : "e.g. Parent, Spouse"}
+            className={getInputClass(false, isStaff)}
+            readOnly={isStaff}
             value={formData.Relationship ?? ""}
             onChange={handleChange}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-600">
+          <label htmlFor="ContactNumber" className="block text-sm font-medium text-gray-600">
             Phone Number
           </label>
           <input
             type="tel"
             name="ContactNumber"
-            placeholder={readOnly ? "" : "Enter contact number"}
-            className="form-input"
-            readOnly={readOnly}
+            placeholder={isStaff ? "" : "Enter contact number"}
+            className={getInputClass(false, isStaff)}
+            readOnly={isStaff}
             value={formData.ContactNumber ?? ""}
             onChange={handleChange}
           />
@@ -411,7 +499,7 @@ export default function PatientForm({
 
       <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Status */}
-        {readOnly ? (
+        {isStaff ? (
           <div className="flex items-center gap-2 text-sm">
             {patientStatus === "typing" && (
               <span className="text-blue-500">🟢 Patient is typing…</span>
@@ -438,7 +526,7 @@ export default function PatientForm({
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          {!readOnly && (
+          {!isStaff && (
             <button
               type="submit"
               className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium

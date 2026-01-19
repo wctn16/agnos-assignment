@@ -37,7 +37,7 @@ export default function StaffPage() {
     const channel = ably.channels.get("patient-form");
 
     channel.subscribe("field-change", (msg) => {
-      const { field, value, status } = msg.data;
+      const { field, value } = msg.data;
       if (msg.data.action === "clear") {
         handleFormClear();
         return
@@ -67,7 +67,7 @@ export default function StaffPage() {
           Staff View
         </h1>
 
-        <PatientForm readOnly data={patientData} status={patientStatus} />
+        <PatientForm isStaff data={patientData} status={patientStatus} />
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export default function Home() {
           href="/patient-form"
           className="flex h-40 w-48 flex-col items-center justify-center rounded-2xl border bg-white text-lg font-semibold shadow hover:bg-blue-20 hover:text-blue-400 transition"
         >
-          <User className="role-icon" />
+          <User className="w-[120px] h-[120px]" />
           <span className="mt-2">Patient</span>
         </Link>
 
@@ -19,8 +19,7 @@ export default function Home() {
           href="/staff-view"
           className="flex h-40 w-48 flex-col items-center justify-center rounded-2xl border bg-white text-lg font-semibold shadow hover:bg-green-20 hover:text-green-400 transition"
         >
-          {/* <span className="text-5xl">🩺</span> */}
-           <Stethoscope className="role-icon" />
+           <Stethoscope className="w-[120px] h-[120px]" />
           <span className="mt-2">Staff</span>
         </Link>
       </div>
