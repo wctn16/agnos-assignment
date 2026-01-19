@@ -200,9 +200,9 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 cols-3">
-      <div className="lg:grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-3 sm:row">
+      <div className="lg:grid grid-cols-1 gap-x-6 gap-y-1 md:grid-cols-3 sm:row-span">
         <div>
-          <label htmlFor="FirstName" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="FirstName" className="block text-sm font-medium text-gray-600 mt-3 sm:mt-3">
             First Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -221,7 +221,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="MiddleName" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="MiddleName" className="block text-sm font-medium text-gray-600 mt-3 mt-3">
             Middle Name (optional)
           </label>
           <input
@@ -236,7 +236,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="LastName" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="LastName" className="block text-sm font-medium text-gray-600 mt-3 mt-3">
             Last Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -255,7 +255,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="BirthDate" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="BirthDate" className="block text-sm font-medium text-gray-600 mt-3">
             Date of Birth <span className="text-red-500">*</span>
           </label>
 
@@ -275,7 +275,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="Gender" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Gender" className="block text-sm font-medium text-gray-600 mt-3">
             Gender <span className="text-red-500">*</span>
           </label>
           {isStaff ? (
@@ -305,7 +305,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="PhoneNumber" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="PhoneNumber" className="block text-sm font-medium text-gray-600 mt-3">
             Phone Number <span className="text-red-500">*</span>
           </label>
           <input
@@ -325,7 +325,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="Email" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Email" className="block text-sm font-medium text-gray-600 mt-3">
             Email <span className="text-red-500">*</span>
           </label>
           <input
@@ -344,7 +344,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="Nationality" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Nationality" className="block text-sm font-medium text-gray-600 mt-3">
             Nationality <span className="text-red-500">*</span>
           </label>
           {isStaff ? (
@@ -376,7 +376,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="Religion" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Religion" className="block text-sm font-medium text-gray-600 mt-3">
             Religion (optional)
           </label>
           {isStaff ? (
@@ -404,7 +404,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="PreferredLanguage" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="PreferredLanguage" className="block text-sm font-medium text-gray-600 mt-3">
             Preferred Language
           </label>
           {isStaff ? (
@@ -431,7 +431,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div className="col-span-2">
-          <label htmlFor="Address" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Address" className="block text-sm font-medium text-gray-600 mt-3">
             Address
           </label>
           <textarea
@@ -445,12 +445,12 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
           />
         </div>
         <div className="col-span-3">
-          <label htmlFor="ContactName" className="block text-md font-medium text-gray-600 font-semibold">
+          <label htmlFor="ContactName" className="block text-md font-medium text-gray-600 font-semibold mt-3">
             Emergency Contact
           </label>
         </div>
         <div>
-          <label htmlFor="ContactName" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="ContactName" className="block text-sm font-medium text-gray-600 mt-3">
             Contact name
           </label>
           <input
@@ -466,7 +466,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="Relationship" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="Relationship" className="block text-sm font-medium text-gray-600 mt-3">
             Relationship
           </label>
           <input
@@ -481,7 +481,7 @@ export default function PatientForm({ isStaff = false, data, status }: Readonly<
         </div>
 
         <div>
-          <label htmlFor="ContactNumber" className="block text-sm font-medium text-gray-600">
+          <label htmlFor="ContactNumber" className="block text-sm font-medium text-gray-600 mt-3">
             Phone Number
           </label>
           <input
